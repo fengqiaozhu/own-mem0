@@ -32,12 +32,21 @@ async def mem0_lifespan(server: FastMCP) -> AsyncIterator[Mem0Context]:
     Yields:
         Mem0Context: The context containing the Mem0 client
     """
-    # Create and return the Memory client with the helper function in utils.py
-    mem0_client = get_mem0_client()
-    
+    print("Initializing Mem0 client...")
     try:
+        # Create and return the Memory client with the helper function in utils.py
+        mem0_client = get_mem0_client()
+        print("Mem0 client initialized successfully")
+        
         yield Mem0Context(mem0_client=mem0_client)
+    except Exception as e:
+        print(f"Error initializing Mem0 client: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise
     finally:
+        print("Cleaning up Mem0 client...")
         # No explicit cleanup needed for the Mem0 client
         pass
 
@@ -116,13 +125,44 @@ async def search_memories(ctx: Context, query: str, limit: int = 3) -> str:
         return f"Error searching memories: {str(e)}"
 
 async def main():
-    transport = os.getenv("TRANSPORT", "sse")
-    if transport == 'sse':
-        # Run the MCP server with sse transport
-        await mcp.run_sse_async()
-    else:
-        # Run the MCP server with stdio transport
-        await mcp.run_stdio_async()
+    try:
+        print("Starting MCP-Mem0 server...")
+        transport = os.getenv("TRANSPORT", "sse")
+        host = os.getenv("HOST", "0.0.0.0")
+        port = os.getenv("PORT", "8050")
+        
+        print(f"Transport: {transport}")
+        print(f"Host: {host}")
+        print(f"Port: {port}")
+        
+        # Check critical environment variables
+        llm_provider = os.getenv('LLM_PROVIDER')
+        llm_api_key = os.getenv('LLM_API_KEY')
+        database_url = os.getenv('DATABASE_URL')
+        
+        print(f"LLM Provider: {llm_provider}")
+        print(f"API Key configured: {'Yes' if llm_api_key else 'No'}")
+        print(f"Database URL configured: {'Yes' if database_url else 'No'}")
+        
+        if transport == 'sse':
+            print(f"Server will be available at: http://{host}:{port}")
+            # Run the MCP server with sse transport
+            await mcp.run_sse_async()
+        else:
+            print("Running with stdio transport")
+            # Run the MCP server with stdio transport
+            await mcp.run_stdio_async()
+    except Exception as e:
+        print(f"Error in main function: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"Fatal error: {str(e)}")
+        import sys
+        sys.exit(1)

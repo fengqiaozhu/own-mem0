@@ -15,12 +15,29 @@ Extract the Following Information:
 """
 
 def get_mem0_client():
+    print("Starting Mem0 client configuration...")
+    
     # Get LLM provider and configuration
     llm_provider = os.getenv('LLM_PROVIDER')
     llm_api_key = os.getenv('LLM_API_KEY')
     llm_model = os.getenv('LLM_CHOICE')
     embedding_model = os.getenv('EMBEDDING_MODEL_CHOICE')
     embedding_dims = os.getenv('EMBEDDING_DIMS')
+    database_url = os.getenv('DATABASE_URL')
+    
+    print(f"LLM Provider: {llm_provider}")
+    print(f"LLM Model: {llm_model}")
+    print(f"Embedding Model: {embedding_model}")
+    print(f"Embedding Dims: {embedding_dims}")
+    print(f"Database URL: {'Configured' if database_url else 'Missing'}")
+    
+    # Validate required environment variables
+    if not llm_provider:
+        raise ValueError("LLM_PROVIDER environment variable is required")
+    if not llm_api_key:
+        raise ValueError("LLM_API_KEY environment variable is required")
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is required")
     
     # Initialize config dictionary
     config = {}
@@ -130,5 +147,17 @@ def get_mem0_client():
 
     # config["custom_fact_extraction_prompt"] = CUSTOM_INSTRUCTIONS
     
-    # Create and return the Memory client
-    return Memory.from_config(config)
+    print("Creating Memory client with config...")
+    print(f"Final config: {config}")
+    
+    try:
+        # Create and return the Memory client
+        memory_client = Memory.from_config(config)
+        print("Memory client created successfully")
+        return memory_client
+    except Exception as e:
+        print(f"Error creating Memory client: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise

@@ -19,15 +19,6 @@ services:
     container_name: mcp_mem0
     env_file:
       - .env
-    environment:
-      HOST: 0.0.0.0
-      DATABASE_URL: postgresql://XXX:XXX@db:5432/mem0
-      LLM_PROVIDER: openai
-      LLM_BASE_URL: https://api.siliconflow.cn/v1
-      LLM_API_KEY: XXX
-      LLM_CHOICE: Qwen/QwQ-32B
-      EMBEDDING_MODEL_CHOICE: BAAI/bge-large-zh-v1.5
-
     depends_on:
       - db
     ports:
