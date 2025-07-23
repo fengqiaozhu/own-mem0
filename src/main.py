@@ -47,7 +47,7 @@ mcp = FastMCP(
     description="MCP server for long term memory storage and retrieval with Mem0",
     lifespan=mem0_lifespan,
     host=os.getenv("HOST", "0.0.0.0"),
-    port=os.getenv("PORT", "8050")
+    port=int(os.getenv("PORT", "8050"))
 )        
 
 @mcp.tool()
