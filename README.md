@@ -148,6 +148,64 @@ python src/main.py
 - **灵活的传输协议**: 支持SSE和stdio两种传输协议
 - **Docker支持**: 提供完整的Docker和Docker Compose支持
 - **语义搜索**: 基于向量相似度的智能记忆检索
+- **智能连接管理**: 自动管理数据库连接，防止连接泄漏
+
+## 连接管理器
+
+本项目包含一个简化的连接管理器，用于优化mem0ai客户端的连接管理，防止连接泄漏。
+
+### 主要功能
+
+- **自动连接管理**: 自动创建和复用mem0ai客户端连接
+- **连接池机制**: 支持多个客户端实例的连接复用
+- **定期清理**: 自动清理空闲连接
+- **上下文管理**: 提供Python上下文管理器，确保连接正确释放
+
+### 使用方法
+
+#### 推荐方式：使用上下文管理器
+
+```python
+from src.connection_manager import managed_mem0_client
+
+# 自动管理客户端生命周期
+with managed_mem0_client("my_client") as client:
+    # 使用客户端进行操作
+    result = client.add("这是一条记忆", user_id="user123")
+    memories = client.search("记忆", user_id="user123")
+# 客户端会自动清理
+```
+
+#### 手动管理方式
+
+```python
+from src.connection_manager import get_connection_manager
+
+manager = get_connection_manager()
+
+# 启动定期清理
+manager.start_periodic_cleanup()
+
+try:
+    # 获取客户端
+    client = manager.get_client("my_client")
+    
+    # 使用客户端
+    result = client.add("记忆内容", user_id="user123")
+    
+finally:
+    # 释放客户端
+    manager.release_client("my_client")
+    
+    # 应用关闭时清理所有连接
+    manager.cleanup_all()
+    manager.stop_periodic_cleanup()
+```
+
+### 最佳实践
+
+1. **优先使用上下文管理器**: `managed_mem0_client` 确保连接正确释放
+2. **应用关闭时清理**: 确保在应用关闭时调用 `cleanup_all()`
 
 ## 使用示例
 
@@ -191,6 +249,11 @@ get_all_memories()
    - 检查端口8050是否被占用
    - 验证.env文件路径和权限
 
+5. **连接管理问题**
+   - **连接泄漏**: 确保使用上下文管理器或正确调用 `release_client()`
+   - **连接数过多**: 确保应用正确释放不再使用的客户端
+   - **客户端创建失败**: 检查数据库连接和配置文件是否正确
+
 ## 开发
 
 ### 本地开发设置
@@ -219,6 +282,15 @@ get_all_memories()
 运行测试套件：
 ```bash
 python -m pytest tests/
+```
+
+#### 基本测试
+
+运行基本的MCP服务器测试：
+
+```bash
+# 测试MCP服务器
+python -m pytest tests/ -v
 ```
 
 ## 许可证

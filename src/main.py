@@ -9,6 +9,7 @@ import json
 import os
 
 from utils import get_mem0_client
+from connection_manager import get_connection_manager, managed_mem0_client
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ class Mem0Context:
 @asynccontextmanager
 async def mem0_lifespan(server: FastMCP) -> AsyncIterator[Mem0Context]:
     """
-    Manages the Mem0 client lifecycle.
+    Manages the Mem0 client lifecycle using connection manager.
     
     Args:
         server: The FastMCP server instance
@@ -32,13 +33,23 @@ async def mem0_lifespan(server: FastMCP) -> AsyncIterator[Mem0Context]:
     Yields:
         Mem0Context: The context containing the Mem0 client
     """
-    print("Initializing Mem0 client...")
+    print("Initializing Mem0 client with connection manager...")
+    connection_manager = get_connection_manager()
+    
     try:
-        # Create and return the Memory client with the helper function in utils.py
-        mem0_client = get_mem0_client()
+        # 启动定期清理线程
+        connection_manager.start_periodic_cleanup(interval=300)  # 每5分钟清理一次
+        
+        # 获取管理的客户端
+        mem0_client = connection_manager.get_client("main_server")
         print("Mem0 client initialized successfully")
         
+        # 记录初始连接数
+        initial_connections = connection_manager.get_connection_count()
+        print(f"Initial database connections: {initial_connections}")
+        
         yield Mem0Context(mem0_client=mem0_client)
+        
     except Exception as e:
         print(f"Error initializing Mem0 client: {str(e)}")
         print(f"Error type: {type(e).__name__}")
@@ -46,9 +57,26 @@ async def mem0_lifespan(server: FastMCP) -> AsyncIterator[Mem0Context]:
         print(f"Traceback: {traceback.format_exc()}")
         raise
     finally:
-        print("Cleaning up Mem0 client...")
-        # No explicit cleanup needed for the Mem0 client
-        pass
+        print("Cleaning up Mem0 client with connection manager...")
+        try:
+            # 释放主服务器客户端
+            connection_manager.release_client("main_server")
+            
+            # 停止定期清理线程
+            connection_manager.stop_periodic_cleanup()
+            
+            # 清理所有客户端
+            connection_manager.cleanup_all()
+            
+            # 记录最终连接数
+            final_connections = connection_manager.get_connection_count()
+            print(f"Final database connections: {final_connections}")
+            
+            print("Connection manager cleanup completed")
+        except Exception as cleanup_error:
+            print(f"Error during connection manager cleanup: {cleanup_error}")
+        
+        print("Mem0 client lifecycle management completed")
 
 # Initialize FastMCP server with the Mem0 client as context
 mcp = FastMCP(
